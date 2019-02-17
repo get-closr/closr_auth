@@ -8,14 +8,7 @@ import 'dart:convert' show json;
 import "package:http/http.dart" as http;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-
-GoogleSignIn _googleSignIn = GoogleSignIn(
-  scopes: <String>[
-    'email',
-    'https://www.googleapis.com/auth/contacts.readonly',
-  ],
-);
+import 'auth.dart';
 
 void main() {
   runApp(
@@ -36,17 +29,29 @@ class SignInDemoState extends State<SignInDemo> {
   String _contactText;
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
-    _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount account) {
-      setState(() {
-        _currentUser = account;
-      });
-      if (_currentUser != null) {
-        _handleGetContact();
-      }
-    });
-    _googleSignIn.signInSilently();
+
+    Auth.scopes= <String>[
+        'email',
+        'https://www.googleapis.com/auth/contacts.readonly',
+      ];
+
+    Auth.googleListener = (account){
+        setState(() {
+          _currentUser = account;
+        });
+        if (_currentUser != null){
+          _handleGetContact();
+        }
+      };
+
+    Auth.signInSilently(
+      scopes: <String>[
+        'email',
+      'https://www.googleapis.com/auth/contacts.readonly'
+      ],
+    );
   }
 
   Future<void> _handleGetContact() async {
@@ -97,14 +102,14 @@ class SignInDemoState extends State<SignInDemo> {
 
   Future<void> _handleSignIn() async {
     try {
-      await _googleSignIn.signIn();
+      await Auth.googleSignIn.signIn();
     } catch (error) {
       print(error);
     }
   }
 
   Future<void> _handleSignOut() async {
-    _googleSignIn.disconnect();
+    Auth.googleSignIn.disconnect();
   }
 
   Widget _buildBody() {
