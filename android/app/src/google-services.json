@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "533494637802",
+    "firebase_url": "https://closrauth.firebaseio.com",
+    "project_id": "closrauth",
+    "storage_bucket": "closrauth.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533494637802:android:f9fd7e5c36a5167b",
+        "android_client_info": {
+          "package_name": "com.closr.closrauth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "533494637802-ldesjobfmsvh1rma43h7s0pmuhovjh49.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.closr.closrauth",
+            "certificate_hash": "ec3bedc3aafb22f09003967b82dfbf43b964891d"
+          }
+        },
+        {
+          "client_id": "533494637802-tmlh1s6hg9331ols8h8ne8ikg3rhfrtd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARBga_nCj-1XeNQo5-YBvqZH8yFx2PySA"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "533494637802-tmlh1s6hg9331ols8h8ne8ikg3rhfrtd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "533494637802-j0cdg7vokgdbdeiu7oirmfcaou2omhs6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.closr.closrauth"
+              }
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
