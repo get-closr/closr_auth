@@ -74,3 +74,4 @@ build/
 **/android/app/src/google-services.json
 **/ios/Runner/GoogleService-Info.plist
 **/lib/asset/
+**/lib/untracked

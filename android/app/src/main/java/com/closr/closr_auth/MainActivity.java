@@ -1,4 +1,4 @@
-package com.closr.closr_auth;
+package com.closr.closrauth;
 
 import android.os.Bundle;
 import io.flutter.app.FlutterActivity;

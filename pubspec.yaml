@@ -1,4 +1,4 @@
-name: closr_auth
+name: closrauth
 description: A new Flutter project.
 
 # The following defines the version and build number for your application.
@@ -19,6 +19,8 @@ dependencies:
   google_sign_in: ^4.0.1+1
   firebase_auth: ^0.8.1+4
   flutter_signin_button: ^0.2.6
+  firebase_database: ^2.0.2
+  cloud_firestore: ^0.9.7
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

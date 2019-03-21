@@ -1,10 +1,14 @@
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'package:closrauth/utils/auth.dart';
 import 'package:flutter/material.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
-import 'package:closr_auth/utils/auth.dart' as fbAuth;
 
 class LoginSignupScreen extends StatefulWidget {
+  LoginSignupScreen({this.auth, this.onSignedIn, this.onSignedUp});
+
+  final BaseAuth auth;
+  final VoidCallback onSignedIn;
+  final VoidCallback onSignedUp;
+
   _LoginSignupScreenState createState() => _LoginSignupScreenState();
 }
 
@@ -14,18 +18,116 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
   final _formKey = GlobalKey<FormState>();
   FormMode _formMode = FormMode.LOGIN;
 
-  // String _username;
   String _status;
-
+  String _username;
   String _email;
   String _password;
-  String _errorMessage;
+
   bool _isLoading;
+  bool _validateAndSave() {
+    final form = _formKey.currentState;
+    if (form.validate()) {
+      form.save();
+      return true;
+    }
+    return false;
+  }
+
+  void _validateAndSubmit() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    if (_validateAndSave()) {
+      try {
+        if (_formMode == FormMode.LOGIN) {
+          if (await widget.auth.signInEmail(_email, _password) == true) {
+            _username = await widget.auth.username();
+            setState(() {
+              _status = "Signed In";
+            });
+            if (_username.length > 0 && _username != null) {
+              widget.onSignedIn();
+            }
+          } else {
+            setState(() {
+              _status = "Could not sign in";
+            });
+          }
+        } else {
+          if (await widget.auth.signUpEmail(_email, _password) == true) {
+            _username = await widget.auth.username();
+            setState(() {
+              _status = "Signed up new user";
+            });
+            if (_username.length > 0 && _username != null) {
+              widget.onSignedUp();
+            }
+          } else {
+            setState(() {
+              _status = "Sign up failed";
+            });
+          }
+        }
+        setState(() {
+          _isLoading = false;
+        });
+      } catch (e) {
+        print('Error: $e');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
+    _isLoading = false;
     super.initState();
     _status = "Not Authenticated";
+  }
+
+  void _signInGoogle() async {
+    if (await widget.auth.signInGoogle() == true) {
+      _username = await widget.auth.username();
+      setState(() {
+        _status = "Signed In";
+      });
+      //TODO: Check if user exists, return on Sign up or on Signed in.
+      widget.onSignedIn();
+    } else {
+      setState(() {
+        _status = "Could not sign in";
+      });
+    }
+  }
+
+  void _changeFormToSignUp() {
+    _formKey.currentState.reset();
+    setState(() {
+      _formMode = FormMode.SIGNUP;
+    });
+  }
+
+  void _changeFormToLogin() {
+    _formKey.currentState.reset();
+    setState(() {
+      _formMode = FormMode.LOGIN;
+    });
+  }
+
+  Widget _showLogo(logoSize) {
+    return Hero(
+      tag: 'hero',
+      child: CircleAvatar(
+        backgroundColor: Colors.transparent,
+        radius: logoSize,
+        child: Image.asset(
+          'lib/asset/images/Closr_grey_01.png',
+        ),
+      ),
+    );
   }
 
   Widget _showEmailInput() {
@@ -67,8 +169,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
               : Text(
                   'Create Account',
                 ),
-          onPressed: () {},
-          // onPressed: _validateAndSubmit,
+          onPressed: _validateAndSubmit,
         ),
       ),
     );
@@ -79,8 +180,9 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
       child: _formMode == FormMode.LOGIN
           ? Text('Create an account')
           : Text('Have an account? Sign in'),
-      onPressed: () {},
-      // onPressed: _formMode == FormMode.LOGIN ? _changeFormToSignUp: _changeFormToLogin,
+      onPressed: _formMode == FormMode.LOGIN
+          ? _changeFormToSignUp
+          : _changeFormToLogin,
     );
   }
 
@@ -101,35 +203,13 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
-          SignInButton(
-            Buttons.Google,
-            onPressed: () {},
-          ),
-          //TODO  figure out auth with FB. But low on priority
-          SignInButton(
-            Buttons.Facebook,
-            onPressed: () {},
-          ),
+          SignInButton(Buttons.Google, onPressed: _signInGoogle),
         ],
       ),
     );
   }
 
-  Widget _showLogo(logoSize) {
-    return Hero(
-      tag: 'hero',
-      child: CircleAvatar(
-        backgroundColor: Colors.transparent,
-        radius: logoSize,
-        child: Image.asset(
-          'lib/asset/images/Closr_grey_01.png',
-          color: Theme.of(context).primaryIconTheme.color,
-        ),
-      ),
-    );
-  }
-
-  Widget _showBody() {
+  Widget _loginForm() {
     return AccentColorOverride(
       child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -139,6 +219,8 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
               scrollDirection: Axis.vertical,
               shrinkWrap: true,
               children: <Widget>[
+                Text(_status),
+                // Text(_username),
                 _showLogo(150.0),
                 _showEmailInput(),
                 _showPasswordInput(),
@@ -152,21 +234,6 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                   height: 5.0,
                 ),
                 _showSocialSignIn(),
-                Text(_status),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    RaisedButton(
-                      onPressed: null,
-                      child: Text("Sign In"),
-                    ),
-                    RaisedButton(
-                      onPressed: null,
-                      child: Text("Sign In Google"),
-                    )
-                  ],
-                ),
               ],
             ),
           )),
@@ -178,7 +245,6 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     Size media = MediaQuery.of(context).size;
     double width = media.width.toDouble();
     double padding = (width - 300) / 2;
-    // double logoSize = width / 2.5;
     return Scaffold(
       body: SafeArea(
           bottom: true,
@@ -188,7 +254,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
               fit: StackFit.expand,
               children: <Widget>[
                 // _showCircularProgress(),
-                _showBody(),
+                _loginForm(),
               ],
             ),
           )),

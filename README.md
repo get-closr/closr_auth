@@ -1,4 +1,4 @@
-# closr_auth
+# closrauth
 
 Closr's Auth Library
 
