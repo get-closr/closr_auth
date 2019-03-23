@@ -1,6 +1,14 @@
 import 'package:closrauth/utils/auth.dart';
+import 'package:closrauth/utils/password.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
+
+class PersonData {
+  String username = '';
+  String email = '';
+  String password = '';
+}
 
 class LoginSignupScreen extends StatefulWidget {
   LoginSignupScreen({this.auth, this.onSignedIn, this.onSignedUp});
@@ -16,14 +24,73 @@ enum FormMode { LOGIN, SIGNUP }
 
 class _LoginSignupScreenState extends State<LoginSignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  FormMode _formMode = FormMode.LOGIN;
+  final _passworldFieldKey = GlobalKey<FormFieldState<String>>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  FormMode _formMode = FormMode.LOGIN;
   String _status;
-  String _username;
-  String _email;
-  String _password;
+  PersonData person = PersonData();
 
   bool _isLoading;
+  bool _autoValidate = false;
+  bool _formWasEditted = false;
+
+  void showInSnackBar(String value) {
+    _scaffoldKey.currentState.showSnackBar(SnackBar(
+      content: Text(value),
+    ));
+  }
+
+  void _handleSubmitted() {
+    final FormState form = _formKey.currentState;
+    if (!form.validate()) {
+      _autoValidate = true;
+      showInSnackBar('Please fix the rrors in red before submitting');
+    } else {
+      form.save();
+      showInSnackBar('${person.username}');
+    }
+  }
+
+  String _validatePassword(String value) {
+    _formWasEditted = true;
+    final FormFieldState<String> passwordField =
+        _passworldFieldKey.currentState;
+    if (passwordField.value == null || passwordField.value.isEmpty)
+      return 'Please enter a password.';
+    if (passwordField.value != value) return 'The passwords don\'t match.';
+    return null;
+  }
+
+  Future<bool> _warnUserAboutInvalidData() async {
+    final FormState form = _formKey.currentState;
+    if (form == null || !_formWasEditted || form.validate()) return true;
+
+    return await showDialog<bool>(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('This form has errors'),
+                content: const Text('Really leave this form?'),
+                actions: <Widget>[
+                  FlatButton(
+                    child: Text("Yes"),
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                  ),
+                  FlatButton(
+                    child: Text("No"),
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                  )
+                ],
+              );
+            }) ??
+        false;
+  }
+
   bool _validateAndSave() {
     final form = _formKey.currentState;
     if (form.validate()) {
@@ -33,6 +100,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     return false;
   }
 
+  //TODO: reorganize validateAndSubmit
   void _validateAndSubmit() async {
     setState(() {
       _isLoading = true;
@@ -41,12 +109,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     if (_validateAndSave()) {
       try {
         if (_formMode == FormMode.LOGIN) {
-          if (await widget.auth.signInEmail(_email, _password) == true) {
-            _username = await widget.auth.username();
+          if (await widget.auth.signInEmail(person.email, person.password) == true) {
+            person.username = await widget.auth.username();
             setState(() {
               _status = "Signed In";
             });
-            if (_username.length > 0 && _username != null) {
+            if (person.username.length > 0 && person.username!=null) {
               widget.onSignedIn();
             }
           } else {
@@ -55,12 +123,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
             });
           }
         } else {
-          if (await widget.auth.signUpEmail(_email, _password) == true) {
-            _username = await widget.auth.username();
+          if (await widget.auth.signUpEmail(person.email, person.password) == true) {
+            person.username = await widget.auth.username();
             setState(() {
               _status = "Signed up new user";
             });
-            if (_username.length > 0 && _username != null) {
+            if (person.username.length > 0 && person.username != null) {
               widget.onSignedUp();
             }
           } else {
@@ -90,7 +158,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   void _signInGoogle() async {
     if (await widget.auth.signInGoogle() == true) {
-      _username = await widget.auth.username();
+      person.username = await widget.auth.username();
       setState(() {
         _status = "Signed In";
       });
@@ -117,7 +185,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     });
   }
 
-  Widget _showLogo(logoSize) {
+  Widget _logo(logoSize) {
     return Hero(
       tag: 'hero',
       child: CircleAvatar(
@@ -130,31 +198,67 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     );
   }
 
-  Widget _showEmailInput() {
+  Widget _emailInput() {
     return TextFormField(
-        maxLines: 1,
+        decoration: InputDecoration(
+          border: UnderlineInputBorder(),
+          hintText: "Email",
+          icon: Icon(Icons.mail),
+        ),
         keyboardType: TextInputType.emailAddress,
         autofocus: false,
-        decoration: InputDecoration(hintText: "Email", icon: Icon(Icons.mail)),
-        validator: (value) => value.isEmpty ? 'Email can\'t be empty,' : null,
-        onSaved: (value) => _email = value);
+        validator: (val) {
+          if (val.isEmpty) return "Email can't be empty";
+          if (!val.contains('@')) return "Email is not valid";
+        },
+        onSaved: (String value) => person.email = value);
   }
 
-  Widget _showPasswordInput() {
-    return TextFormField(
-        maxLines: 1,
-        obscureText: true,
-        autofocus: false,
-        decoration:
-            InputDecoration(hintText: "Password", icon: Icon(Icons.lock)),
-        validator: (value) =>
-            value.isEmpty ? 'Password can\'t be empty,' : null,
-        onSaved: (value) => _password = value);
+  Widget _passwordInput() {
+    return _formMode == FormMode.LOGIN
+        ? TextFormField(
+            decoration:
+                InputDecoration(hintText: "Password", icon: Icon(Icons.lock)),
+            maxLines: 1,
+            obscureText: true,
+            autofocus: false,
+            validator: (value) =>
+                value.isEmpty ? 'Password can\'t be empty,' : null,
+            onSaved: (value) => person.password = value)
+        : _passwordSignup();
   }
 
-  Widget _showPrimaryButton() {
+  Widget _passwordSignup() {
+    return Column(
+      children: <Widget>[
+        PasswordField(
+            fieldKey: _passworldFieldKey,
+            helperText: 'No more than 8 characters.',
+            labelText: 'Password *',
+            onFieldSubmitted: (value) {
+              setState(() {
+                person.password = value;
+              });
+            }),
+        Text(person.password),
+        TextFormField(
+          enabled: person.password != null && person.password.isNotEmpty,
+          decoration: InputDecoration(
+              border: UnderlineInputBorder(),
+              labelText: "Confirm Password",
+              icon: Icon(Icons.lock),
+          ),
+          maxLength: 8,
+          obscureText: true,
+          validator: _validatePassword,
+        )
+      ],
+    );
+  }
+
+  Widget _primaryButton() {
     return Padding(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).size.height / 15),
+      padding: EdgeInsets.only(top: 5.0, bottom: 5.0),
       child: SizedBox(
         height: MediaQuery.of(context).size.height / 20,
         child: RaisedButton(
@@ -163,19 +267,14 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           color: Theme.of(context).buttonColor,
           child: _formMode == FormMode.LOGIN
-              ? Text(
-                  'Login',
-                )
-              : Text(
-                  'Create Account',
-                ),
-          onPressed: _validateAndSubmit,
+              ? Text('Login'): Text('Create Account'),
+          onPressed: _handleSubmitted,
         ),
       ),
     );
   }
 
-  Widget _showSwitchButton() {
+  Widget _switchButton() {
     return FlatButton(
       child: _formMode == FormMode.LOGIN
           ? Text('Create an account')
@@ -186,19 +285,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     );
   }
 
-  Widget _showCircularProgress() {
-    if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-    return Container(
-      height: 0.0,
-      width: 0.0,
-    );
-  }
-
-  Widget _showSocialSignIn() {
+  Widget _socialSignIn() {
     return Container(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -210,33 +297,36 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
   }
 
   Widget _loginForm() {
-    return AccentColorOverride(
-      child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Form(
+    return Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.0),
+        child: Form(
             key: _formKey,
-            child: ListView(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              children: <Widget>[
-                Text(_status),
-                // Text(_username),
-                _showLogo(150.0),
-                _showEmailInput(),
-                _showPasswordInput(),
-                _showPrimaryButton(),
-                _showSwitchButton(),
-                Divider(
-                  height: 5.0,
-                ),
-                Center(child: Text("OR")),
-                Divider(
-                  height: 5.0,
-                ),
-                _showSocialSignIn(),
-              ],
-            ),
-          )),
+            autovalidate: _autoValidate,
+            onWillPop: _warnUserAboutInvalidData,
+            child: SingleChildScrollView(
+              dragStartBehavior: DragStartBehavior.down,
+              child: Column(
+                children: <Widget>[
+                  SizedBox(
+                    height: 12.0,
+                  ),
+                  Text(_status),
+                  _logo(140.0),
+                  _emailInput(),
+                  _passwordInput(),
+                  _primaryButton(),
+                  _switchButton(),
+                  Divider(
+                    height: 5.0,
+                  ),
+                  Center(child: Text("OR")),
+                  Divider(
+                    height: 5.0,
+                  ),
+                  _socialSignIn(),
+                ],
+              ),
+            )),
     );
   }
 
@@ -247,33 +337,16 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     double padding = (width - 300) / 2;
     return Scaffold(
       body: SafeArea(
-          bottom: true,
+          top: true,
+          bottom: false,
           child: Padding(
             padding: EdgeInsets.fromLTRB(padding, 0, padding, 0),
-            child: Stack(
-              fit: StackFit.expand,
+            child: Column(
               children: <Widget>[
-                // _showCircularProgress(),
                 _loginForm(),
               ],
             ),
           )),
-    );
-  }
-}
-
-class AccentColorOverride extends StatelessWidget {
-  const AccentColorOverride({Key key, this.color, this.child})
-      : super(key: key);
-
-  final Color color;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      child: child,
-      data: Theme.of(context).copyWith(accentColor: color),
     );
   }
 }

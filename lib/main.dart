@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:closrauth/screens/login_screen.dart';
 import 'package:closrauth/screens/setup_screen.dart';
 import 'package:closrauth/utils/auth.dart';
-import 'screens/home_screen.dart';
+// import 'screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';

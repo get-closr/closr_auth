@@ -42,11 +42,20 @@ class Auth implements BaseAuth {
     //Perform database check/retrieve user details
   }
 
-  Future<bool> signUpEmail(String email, String password) async {
-    FirebaseUser user = await _auth.createUserWithEmailAndPassword(
-        email: email, password: password);
+  signUpEmail(String email, String password) async {
+    List<String> providers = await _auth.fetchSignInMethodsForEmail(email: email);
+    if (providers != null && providers.length >0){
+      print("Already has providers: ${providers.toString()}");
+      // return handleProviders(providers);
+      return false;
+    }
 
-    if (user != null && user.isAnonymous == false) {
+    FirebaseUser newuser = await _auth.createUserWithEmailAndPassword(
+        email: email, password: password);
+    // await newuser.sendEmailVerification();
+    // var userUdpdateInfo =UserUpdateInfo();
+    // userUdpdateInfo.displayName = name;
+    if (newuser != null && newuser.isAnonymous == false) {
       return true;
     } else {
       return false;
