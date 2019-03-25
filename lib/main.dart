@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:closrauth/screens/login_screen.dart';
 import 'package:closrauth/screens/setup_screen.dart';
-import 'package:closrauth/utils/auth.dart';
-// import 'screens/home_screen.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:closrauth/utils/auth.dart';
 import 'untracked/specs.dart';
 
 enum AuthStatus {
@@ -37,28 +38,27 @@ void main() async {
   final FirebaseApp app =
       await FirebaseApp.configure(options: _options(), name: 'closrauth');
 
-  final FirebaseDatabase database = FirebaseDatabase(app: app);
-
   runApp(MaterialApp(
-    home: ClosrAuth(app: app, database: database, auth: Auth()),
+    home: ClosrAuth(
+      app: app,
+      auth: Auth(),
+    )
   ));
 }
 
 class ClosrAuth extends StatefulWidget {
-  final FirebaseApp app;
-  final FirebaseDatabase database;
   final BaseAuth auth;
+  final FirebaseApp app;
 
-  ClosrAuth({Key key, this.auth, this.app, this.database}) : super(key: key);
+  ClosrAuth({Key key, this.auth, this.app}) : super(key: key);
 
   _ClosrAuthState createState() =>
-      _ClosrAuthState(app: app, database: database, auth: auth);
+      _ClosrAuthState(app: app, auth: auth);
 }
 
 class _ClosrAuthState extends State<ClosrAuth> {
-  _ClosrAuthState({this.app, this.database, this.auth});
+  _ClosrAuthState({this.app, this.auth});
   final FirebaseApp app;
-  final FirebaseDatabase database;
   final BaseAuth auth;
 
   AuthStatus authStatus = AuthStatus.NOT_DETERMINED;
@@ -97,16 +97,12 @@ class _ClosrAuthState extends State<ClosrAuth> {
           onSignedOut: _onSignedOut,
         );
       case AuthStatus.LOGGED_IN_SETUP:
-        // return HomeScreen(
-        //   userId: _userId,
+        return HomeScreen();
+        //TODO: For Testing Purpose
+        // return SetupScreen(
         //   auth: widget.auth,
         //   onSignedOut: _onSignedOut,
         // );
-        //TODO: For Testing Purpose
-        return SetupScreen(
-          auth: widget.auth,
-          onSignedOut: _onSignedOut,
-        );
         break;
       default:
         return _buildWaitingScreen();
@@ -150,4 +146,5 @@ class _ClosrAuthState extends State<ClosrAuth> {
       ),
     );
   }
+
 }

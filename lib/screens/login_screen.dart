@@ -1,13 +1,20 @@
-import 'package:closrauth/utils/auth.dart';
-import 'package:closrauth/utils/password.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_signin_button/flutter_signin_button.dart';
+import 'dart:async';
 
-class PersonData {
+import 'package:flutter_signin_button/flutter_signin_button.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:closrauth/utils/auth.dart';
+import 'package:closrauth/utils/password.dart';
+import 'package:flutter_test/flutter_test.dart';
+// import 'package:closrauth/models/user.dart';
+
+class Person {
   String username = '';
   String email = '';
   String password = '';
+  String id = '';
 }
 
 class LoginSignupScreen extends StatefulWidget {
@@ -29,9 +36,9 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   FormMode _formMode = FormMode.LOGIN;
   String _status;
-  PersonData person = PersonData();
+  Person person = Person();
 
-  bool _isLoading;
+  bool _isLoading, _isIos;
   bool _autoValidate = false;
   bool _formWasEditted = false;
 
@@ -39,17 +46,6 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     _scaffoldKey.currentState.showSnackBar(SnackBar(
       content: Text(value),
     ));
-  }
-
-  void _handleSubmitted() {
-    final FormState form = _formKey.currentState;
-    if (!form.validate()) {
-      _autoValidate = true;
-      showInSnackBar('Please fix the rrors in red before submitting');
-    } else {
-      form.save();
-      showInSnackBar('${person.username}');
-    }
   }
 
   String _validatePassword(String value) {
@@ -100,74 +96,62 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     return false;
   }
 
-  //TODO: reorganize validateAndSubmit
   void _validateAndSubmit() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     if (_validateAndSave()) {
-      try {
-        if (_formMode == FormMode.LOGIN) {
-          if (await widget.auth.signInEmail(person.email, person.password) == true) {
-            person.username = await widget.auth.username();
-            setState(() {
-              _status = "Signed In";
-            });
-            if (person.username.length > 0 && person.username!=null) {
-              widget.onSignedIn();
-            }
-          } else {
-            setState(() {
-              _status = "Could not sign in";
-            });
-          }
-        } else {
-          if (await widget.auth.signUpEmail(person.email, person.password) == true) {
-            person.username = await widget.auth.username();
-            setState(() {
-              _status = "Signed up new user";
-            });
-            if (person.username.length > 0 && person.username != null) {
-              widget.onSignedUp();
-            }
-          } else {
-            setState(() {
-              _status = "Sign up failed";
-            });
-          }
+      if (_formMode == FormMode.LOGIN) {
+        person.id = await widget.auth
+            .signInEmail(person.email, person.password)
+            .catchError((onError) {
+          final snackbar = SnackBar(
+            content: Text(onError.toString()),
+          );
+          _scaffoldKey.currentState.showSnackBar(snackbar);
+        });
+        print(person.id);
+        if (person.id != null) {
+          setState(() {
+            _status = "Sign in successful";
+          });
+          widget.onSignedIn();
         }
-        setState(() {
-          _isLoading = false;
+      } else {
+        person.id = await widget.auth
+            .signUpEmail(person.email, person.password)
+            .catchError((onError) {
+          final snackbar = SnackBar(
+            content: Text(onError.toString()),
+          );
+          _scaffoldKey.currentState..showSnackBar(snackbar);
         });
-      } catch (e) {
-        print('Error: $e');
-        setState(() {
-          _isLoading = false;
-        });
+        if (person.id != null) {
+          setState(() {
+            _status = "Sign up successful";
+          });
+          widget.onSignedUp();
+        }
       }
     }
   }
 
   @override
   void initState() {
-    _isLoading = false;
     super.initState();
+    _isLoading = false;
     _status = "Not Authenticated";
   }
 
   void _signInGoogle() async {
-    if (await widget.auth.signInGoogle() == true) {
-      person.username = await widget.auth.username();
+    person.id = await widget.auth.signInGoogle().catchError((onError) {
+      final snackbar = SnackBar(
+        content: Text(onError.toString()),
+      );
+      _scaffoldKey.currentState..showSnackBar(snackbar);
+    });
+    if (person.id != null) {
       setState(() {
-        _status = "Signed In";
+        _status = "Sign up successful";
       });
-      //TODO: Check if user exists, return on Sign up or on Signed in.
       widget.onSignedIn();
-    } else {
-      setState(() {
-        _status = "Could not sign in";
-      });
     }
   }
 
@@ -240,13 +224,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                 person.password = value;
               });
             }),
-        Text(person.password),
         TextFormField(
           enabled: person.password != null && person.password.isNotEmpty,
           decoration: InputDecoration(
-              border: UnderlineInputBorder(),
-              labelText: "Confirm Password",
-              icon: Icon(Icons.lock),
+            border: UnderlineInputBorder(),
+            labelText: "Confirm Password",
+            icon: Icon(Icons.lock),
           ),
           maxLength: 8,
           obscureText: true,
@@ -258,18 +241,18 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   Widget _primaryButton() {
     return Padding(
-      padding: EdgeInsets.only(top: 5.0, bottom: 5.0),
+      padding: EdgeInsets.only(top: 20.0, bottom: 5.0),
       child: SizedBox(
         height: MediaQuery.of(context).size.height / 20,
         child: RaisedButton(
-          elevation: 8.0,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          color: Theme.of(context).buttonColor,
-          child: _formMode == FormMode.LOGIN
-              ? Text('Login'): Text('Create Account'),
-          onPressed: _handleSubmitted,
-        ),
+            elevation: 8.0,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            color: Theme.of(context).buttonColor,
+            child: _formMode == FormMode.LOGIN
+                ? Text('Login')
+                : Text('Create Account'),
+            onPressed: _validateAndSubmit),
       ),
     );
   }
@@ -298,35 +281,35 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   Widget _loginForm() {
     return Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.0),
-        child: Form(
-            key: _formKey,
-            autovalidate: _autoValidate,
-            onWillPop: _warnUserAboutInvalidData,
-            child: SingleChildScrollView(
-              dragStartBehavior: DragStartBehavior.down,
-              child: Column(
-                children: <Widget>[
-                  SizedBox(
-                    height: 12.0,
-                  ),
-                  Text(_status),
-                  _logo(140.0),
-                  _emailInput(),
-                  _passwordInput(),
-                  _primaryButton(),
-                  _switchButton(),
-                  Divider(
-                    height: 5.0,
-                  ),
-                  Center(child: Text("OR")),
-                  Divider(
-                    height: 5.0,
-                  ),
-                  _socialSignIn(),
-                ],
-              ),
-            )),
+      padding: EdgeInsets.symmetric(horizontal: 16.0),
+      child: Form(
+          key: _formKey,
+          autovalidate: _autoValidate,
+          onWillPop: _warnUserAboutInvalidData,
+          child: SingleChildScrollView(
+            dragStartBehavior: DragStartBehavior.down,
+            child: Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 12.0,
+                ),
+                Text(_status),
+                _logo(140.0),
+                _emailInput(),
+                _passwordInput(),
+                _primaryButton(),
+                _switchButton(),
+                Divider(
+                  height: 5.0,
+                ),
+                Center(child: Text("OR")),
+                Divider(
+                  height: 5.0,
+                ),
+                _socialSignIn(),
+              ],
+            ),
+          )),
     );
   }
 
@@ -335,7 +318,9 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
     Size media = MediaQuery.of(context).size;
     double width = media.width.toDouble();
     double padding = (width - 300) / 2;
+    _isIos = Theme.of(context).platform == TargetPlatform.iOS;
     return Scaffold(
+      key: _scaffoldKey,
       body: SafeArea(
           top: true,
           bottom: false,

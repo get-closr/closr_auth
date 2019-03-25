@@ -1,14 +1,13 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-// import 'package:firebase_database/firebase_database.dart';
-// import 'package:closrauth/models/user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 abstract class BaseAuth {
-  Future<bool> signInEmail(String email, String password);
-  Future<bool> signUpEmail(String email, String password);
-  Future<bool> signInGoogle();
+  Future<String> signInEmail(String email, String password);
+  Future<String> signInGoogle();
+  Future<String> signUpEmail(String email, String password);
   Future<void> signOut();
   Future<String> username();
   Future<FirebaseUser> currentUser();
@@ -18,74 +17,96 @@ class Auth implements BaseAuth {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  Future<bool> signOut() async {
-    await _auth.signOut();
-    return true;
-  }
-
-  Future<bool> ensureLoggedIn() async {
+  Future<Null> _ensureLoggedIn() async {
+    SharedPreferences prefs;
+    prefs = await SharedPreferences.getInstance();
     FirebaseUser firebaseUser = await _auth.currentUser();
-    assert(firebaseUser != null);
-    assert(firebaseUser.isAnonymous == false);
-    print("We are logged into Firebase");
-    return true;
+    if (firebaseUser == null) {
+      print("Not logged in");
+    } else {
+      print("We are logged into Firebase, ${firebaseUser.displayName}");
+
+      if (firebaseUser != null) {
+        final QuerySnapshot result = await Firestore.instance
+            .collection('users')
+            .where('id', isEqualTo: firebaseUser.uid)
+            .getDocuments();
+        print("check1");
+        final List<DocumentSnapshot> documents = result.documents;
+        print("check2");
+        if (documents.length == 0) {
+          Firestore.instance
+              .collection('users')
+              .document(firebaseUser.uid)
+              .setData({
+            'username': firebaseUser.email
+                .substring(0, firebaseUser.email.indexOf('@')),
+            'photoUrl': firebaseUser.photoUrl,
+            'id': firebaseUser.uid,
+            'email': firebaseUser.email
+          });
+          prefs.setString("username", firebaseUser.displayName);
+          prefs.setString("userid", firebaseUser.uid);
+          prefs.setString("useremail", firebaseUser.email);
+          prefs.setString("userphotourl", firebaseUser.photoUrl);
+        } else {
+          print("check3");
+          print(documents);
+          print("check4");
+        }
+      }
+    }
   }
 
-  Future<bool> signInEmail(String email, String password) async {
+
+
+  Future<String> signInEmail(String email, String password) async {
     FirebaseUser user = await _auth.signInWithEmailAndPassword(
         email: email, password: password);
-    if (user != null && user.isAnonymous == false) {
-      return true;
-    } else {
-      return false;
-    }
-    //Perform database check/retrieve user details
+    _ensureLoggedIn();
+    return user.uid;
   }
 
-  signUpEmail(String email, String password) async {
-    List<String> providers = await _auth.fetchSignInMethodsForEmail(email: email);
-    if (providers != null && providers.length >0){
+  Future<String> signUpEmail(String email, String password) async {
+    List<String> providers =
+        await _auth.fetchSignInMethodsForEmail(email: email);
+    if (providers != null && providers.length > 0) {
       print("Already has providers: ${providers.toString()}");
-      // return handleProviders(providers);
-      return false;
     }
 
     FirebaseUser newuser = await _auth.createUserWithEmailAndPassword(
         email: email, password: password);
-    // await newuser.sendEmailVerification();
-    // var userUdpdateInfo =UserUpdateInfo();
-    // userUdpdateInfo.displayName = name;
-    if (newuser != null && newuser.isAnonymous == false) {
-      return true;
-    } else {
-      return false;
-    }
-    //Create user entry in database
+    newuser.sendEmailVerification();
+    _ensureLoggedIn();
+    return newuser.uid;
   }
 
-  Future<bool> signInGoogle() async {
+  Future<String> signInGoogle() async {
     GoogleSignInAccount googleUser = await _googleSignIn.signIn();
     GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
     final AuthCredential credential = GoogleAuthProvider.getCredential(
         accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
     final FirebaseUser user = await _auth.signInWithCredential(credential);
 
-    if (user != null && user.isAnonymous == false) {
-      return true;
-    } else {
-      return false;
-    }
+    // _ensureLoggedIn();
+    return user.uid;
   }
 
   Future<String> username() async {
-    await ensureLoggedIn();
+    // await _ensureLoggedIn();
     FirebaseUser firebaseUser = await _auth.currentUser();
-    return firebaseUser.uid;
+    return firebaseUser.displayName;
   }
 
   Future<FirebaseUser> currentUser() async {
+    // await _ensureLoggedIn();
     FirebaseUser user = await _auth.currentUser();
     return user;
+  }
+
+  Future<bool> signOut() async {
+    await _auth.signOut();
+    print("Loging out");
+    return true;
   }
 }

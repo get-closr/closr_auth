@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
   final String name;
+  final String email = '';
+  final String password = '';
   final String avatarUrl;
   final String photoUrl;
   final String text;
