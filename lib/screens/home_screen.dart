@@ -1,12 +1,18 @@
+import 'package:closrauth/utils/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
+  final BaseAuth auth;
+  final VoidCallback onSignedOut;
+
+  HomeScreen({Key key, this.auth, this.onSignedOut}) : super(key: key);
+
   @override
-  _Home createState() => _Home();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _Home extends State<StatefulWidget> {
+class _HomeScreenState extends State<HomeScreen> {
   var _totalDocs = 0;
   var _queriedDocs = 0;
   var _interactionCount = 0;
@@ -148,7 +154,6 @@ class _Home extends State<StatefulWidget> {
         Firestore.instance.collection('stats').document('interactions');
     try {
       await Firestore.instance.runTransaction((Transaction tx) async {
-        print('--TRANSACTION START--');
         DocumentSnapshot postSnapshot = await tx.get(postRef);
         print(postSnapshot.exists);
         if (postSnapshot.exists) {
@@ -168,6 +173,15 @@ class _Home extends State<StatefulWidget> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Flutter Firestore Tutorial'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(
+              Icons.exit_to_app,
+              semanticLabel: 'logout',
+            ),
+            onPressed: _signOut,
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(18.0),
@@ -283,5 +297,12 @@ class _Home extends State<StatefulWidget> {
         ),
       ),
     );
+  }
+
+  void _signOut() async {
+    try {
+      await widget.auth.signOut();
+      widget.onSignedOut();
+    } catch (e) {}
   }
 }

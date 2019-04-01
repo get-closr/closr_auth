@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:closrauth/screens/login_screen.dart';
 import 'package:closrauth/screens/setup_screen.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -39,11 +39,10 @@ void main() async {
       await FirebaseApp.configure(options: _options(), name: 'closrauth');
 
   runApp(MaterialApp(
-    home: ClosrAuth(
-      app: app,
-      auth: Auth(),
-    )
-  ));
+      home: ClosrAuth(
+    app: app,
+    auth: Auth(),
+  )));
 }
 
 class ClosrAuth extends StatefulWidget {
@@ -52,8 +51,7 @@ class ClosrAuth extends StatefulWidget {
 
   ClosrAuth({Key key, this.auth, this.app}) : super(key: key);
 
-  _ClosrAuthState createState() =>
-      _ClosrAuthState(app: app, auth: auth);
+  _ClosrAuthState createState() => _ClosrAuthState(app: app, auth: auth);
 }
 
 class _ClosrAuthState extends State<ClosrAuth> {
@@ -97,12 +95,16 @@ class _ClosrAuthState extends State<ClosrAuth> {
           onSignedOut: _onSignedOut,
         );
       case AuthStatus.LOGGED_IN_SETUP:
-        return HomeScreen();
-        //TODO: For Testing Purpose
-        // return SetupScreen(
+        // return HomeScreen(
         //   auth: widget.auth,
         //   onSignedOut: _onSignedOut,
         // );
+        // TODO: For Testing Purpose
+        return SetupScreen(
+          auth: widget.auth,
+          onSignedOut: _onSignedOut,
+          onSetupComplete: _onSetupComplete,
+        );
         break;
       default:
         return _buildWaitingScreen();
@@ -138,6 +140,12 @@ class _ClosrAuthState extends State<ClosrAuth> {
     });
   }
 
+  void _onSetupComplete() {
+    setState(() {
+      authStatus = AuthStatus.LOGGED_IN_SETUP;
+    });
+  }
+
   Widget _buildWaitingScreen() {
     return Scaffold(
       body: Container(
@@ -146,5 +154,4 @@ class _ClosrAuthState extends State<ClosrAuth> {
       ),
     );
   }
-
 }

@@ -3,12 +3,9 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter_signin_button/flutter_signin_button.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:closrauth/utils/auth.dart';
 import 'package:closrauth/utils/password.dart';
 import 'package:flutter_test/flutter_test.dart';
-// import 'package:closrauth/models/user.dart';
 
 class Person {
   String username = '';
@@ -184,18 +181,18 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   Widget _emailInput() {
     return TextFormField(
-        decoration: InputDecoration(
-          border: UnderlineInputBorder(),
-          hintText: "Email",
-          icon: Icon(Icons.mail),
-        ),
-        keyboardType: TextInputType.emailAddress,
-        autofocus: false,
-        validator: (val) {
-          if (val.isEmpty) return "Email can't be empty";
-          if (!val.contains('@')) return "Email is not valid";
-        },
-        onSaved: (String value) => person.email = value);
+            decoration: InputDecoration(
+              border: UnderlineInputBorder(),
+              hintText: "Email",
+              icon: Icon(Icons.mail),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            autofocus: false,
+            validator: (val) {
+              if (val.isEmpty) return "Email can't be empty";
+              if (!val.contains('@')) return "Email is not valid";
+            },
+            onSaved: (String value) => person.email = value);
   }
 
   Widget _passwordInput() {
@@ -334,4 +331,6 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
           )),
     );
   }
+
+
 }
