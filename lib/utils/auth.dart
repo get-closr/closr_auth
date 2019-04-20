@@ -3,6 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+enum AuthStatus {
+  NOT_DETERMINED,
+  NOT_LOGGED_IN,
+  LOGGED_IN_NOT_SETUP,
+  LOGGED_IN_SETUP
+}
 
 abstract class BaseAuth {
   Future<String> signInEmail(String email, String password);
@@ -18,50 +24,46 @@ class Auth implements BaseAuth {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<Null> _ensureLoggedIn() async {
-    // 1. currentuser, confirm logged in, firebaseUser!=null
-    // 2. crosscheck database with currentUser()
-    // 3. safe to shared SharedPreferences
-
-    // SharedPreferences prefs;
-    // prefs = await SharedPreferences.getInstance();
     FirebaseUser firebaseUser = await _auth.currentUser();
     if (firebaseUser == null) {
       print("Not logged in");
     } else {
       print("We are logged into Firebase, ${firebaseUser.displayName}");
 
-      //check if user exists
-      final QuerySnapshot result = await Firestore.instance
-          .collection('users')
-          .where('id', isEqualTo: firebaseUser.uid)
-          .getDocuments();
-
-      final List<DocumentSnapshot> documents = result.documents;
-
-      //if user does not exist
-      if (documents.length == 0) {
+      if (crossCheckDatabase(firebaseUser)) {
         Firestore.instance
             .collection('users')
             .document(firebaseUser.uid)
             .setData({
           'username': firebaseUser.displayName,
-          'photoUrl': firebaseUser.photoUrl, //make list of random initial photos
+          'photoUrl': firebaseUser.photoUrl,
           'id': firebaseUser.uid,
           'email': firebaseUser.email,
-          'partnerId': "",
-          'deviceId': "",
-          //add other fields
+          'partnerId': null,
+          'deviceId': null,
         });
       } else {
-        print(documents);
+        print("User exists in database");
       }
     }
+  }
+
+  crossCheckDatabase(FirebaseUser firebaseUser) async {
+    final QuerySnapshot result = await Firestore.instance
+    .collection('users')
+    .where('id', isEqualTo: firebaseUser.uid)
+    .getDocuments();
+
+    final List<DocumentSnapshot> documents = result.documents;
+
+    return (documents.length==0);
+
   }
 
   Future<String> signInEmail(String email, String password) async {
     FirebaseUser user = await _auth.signInWithEmailAndPassword(
         email: email, password: password);
-    _ensureLoggedIn();
+     _ensureLoggedIn();
     return user.uid;
   }
 
@@ -86,18 +88,18 @@ class Auth implements BaseAuth {
         accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
     final FirebaseUser user = await _auth.signInWithCredential(credential);
 
-    // _ensureLoggedIn();
+     _ensureLoggedIn();
     return user.uid;
   }
 
   Future<String> userId() async {
-    await _ensureLoggedIn();
+     _ensureLoggedIn();
     FirebaseUser firebaseUser = await _auth.currentUser();
     return firebaseUser.uid;
   }
 
   Future<FirebaseUser> currentUser() async {
-    await _ensureLoggedIn();
+     _ensureLoggedIn();
     FirebaseUser user = await _auth.currentUser();
     return user;
   }

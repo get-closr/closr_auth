@@ -36,9 +36,9 @@ FirebaseOptions _options() {
 
 void main() async {
   AppConfig().setAppConfig(
-    appEnvironment: AppEnvironmet.PROD,
+    appEnvironment: AppEnvironmet.STAGE,
     appName: 'Closr Auth',
-    description: 'This is the production version of Closr Auth',
+    description: 'This is the staging version of Closr Auth',
     baseUrl: "",
     themeData: ThemeData(
       primarySwatch: Colors.red,

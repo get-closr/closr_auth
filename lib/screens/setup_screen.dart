@@ -25,6 +25,9 @@ class _SetupScreenState extends State<SetupScreen> {
 
   CrudMedthods crudObj = CrudMedthods();
 
+  get defaultPhotoUrl =>
+      "https://thesocietypages.org/socimages/files/2009/05/nopic_192.gif";
+
   Future<bool> addDialog(BuildContext context) async {
     return showDialog(
         context: context,
@@ -180,11 +183,12 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   void initState() {
-    crudObj.getData().then((results) {
+    crudObj.getCurrentUserData().then((results) {
       setState(() {
         users = results;
       });
     });
+    print(users);
     super.initState();
   }
 
@@ -208,7 +212,7 @@ class _SetupScreenState extends State<SetupScreen> {
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: () {
-              crudObj.getData().then((results) {
+              crudObj.getCurrentUserData().then((results) {
                 setState(() {
                   users = results;
                 });
@@ -232,30 +236,28 @@ class _SetupScreenState extends State<SetupScreen> {
                 itemBuilder: (BuildContext context, int index) {
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: NetworkImage(snapshot
-                          .data.documents[index].data['photoUrl']
-                          .toString()),
+                      backgroundImage: NetworkImage(
+                          snapshot.data.documents[index].data['photoUrl'] ??
+                              defaultPhotoUrl),
                     ),
-                    title: Text(snapshot.data.documents[index].data['username']
-                        .toString()),
+                    title: Text(
+                        snapshot.data.documents[index].data['username'] ??
+                            "Empty"),
                     subtitle: Column(
                       children: <Widget>[
-                        Text(snapshot.data.documents[index].data['email']
-                            .toString()),
-                        Text(snapshot.data.documents[index].data['deviceId']
-                            .toString()),
-                        Text(snapshot.data.documents[index].data['partnerId']
-                            .toString()),
+                        Text(snapshot.data.documents[index].data['email'] ??
+                            "Empty"),
+                        Text(snapshot.data.documents[index].data['deviceId'] ??
+                            "Empty"),
+                        Text(snapshot.data.documents[index].data['partnerId'] ??
+                            "Empty"),
                       ],
                     ),
                     onTap: () {
                       updateDialog(
                           context, snapshot.data.documents[index].documentID);
                     },
-                    onLongPress: () {
-                      crudObj.deleteData(
-                          snapshot.data.documents[index].documentID);
-                    },
+                    onLongPress: _onSetupComplete,
                   );
                 },
               );
@@ -269,18 +271,22 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   /*Todo
-  * Streambuilder to only load current User
-  * check that no fields are null and return call onSetupComplete,
-  * transit to device control screen
-  * update per field not everything in Dialog
-  * add bluetooth update
-  */
-
+                      * check that no fields are null and return call onSetupComplete,
+                      * transit to device control screen
+                      * update per field not everything in Dialog
+                      * add bluetooth update
+                      */
 
   void _signOut() async {
     try {
       await widget.auth.signOut();
       widget.onSignedOut();
+    } catch (e) {}
+  }
+
+  void _onSetupComplete() {
+    try {
+      widget.onSetupComplete();
     } catch (e) {}
   }
 }
